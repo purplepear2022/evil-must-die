@@ -1,0 +1,35 @@
+import pygame
+pygame.init()
+
+# set up of the game and the size of the screen
+screen_width = 1000
+screen_height = 1000
+
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('platformer')
+
+#background images
+text = pygame.image.load('...')
+background = pygame.image.load('...')
+start = pygame.image.load('...')
+
+# Run until the user asks to quit
+running = True
+while running:
+ 
+ #runs the images 
+    screen.blit(background, (0,0))
+    screen.blit(text, (140, 5))
+    screen.blit(start, (180, 450))
+
+    # closing the game
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+
+# updates the game with the new instructions
+    pygame.display.update()
+
+# Done! Time to quit.
+pygame.quit()
