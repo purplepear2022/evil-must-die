@@ -1,106 +1,112 @@
 import pygame
-
-
 pygame.init()
 
+# set up of the game and the size of the screen
 screen_width = 1000
 screen_height = 1000
 
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption('platformer1')
+pygame.display.set_caption('rock game')
 
-#define game variables
+#defining the grid size
 tile_size = 50
 
-
-#load images
-sun_img = pygame.image.load('...')
-bg_img = pygame.image.load('...')
+#background
+lava = pygame.image.load('...')
 
 def draw_grid():
-	for line in range(0, 20):
-		pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screen_width, line * tile_size))
-		pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screen_height))
-
+    for line in range (0,20):
+        pygame.draw.line(screen, (255,255,255), (0, line * tile_size), (screen_width, line * tile_size))
+        pygame.draw.line(screen, (255,255,255), (line * tile_size, 0),(line * tile_size, screen_height))
 
 
 class World():
-	def __init__(self, data):
-		self.tile_list = []
+    def __init__(self, data):
+        self.tile_list = []
 
-		#load images
-		dirt_img = pygame.image.load('...')
-		grass_img = pygame.image.load('...')
+        #platform
+        rock = pygame.image.load('...')
+        red = pygame.image.load('...')
 
-		row_count = 0
-		for row in data:
-			col_count = 0
-			for tile in row:
-				if tile == 1:
-					img = pygame.transform.scale(dirt_img, (tile_size, tile_size))
-					img_rect = img.get_rect()
-					img_rect.x = col_count * tile_size
-					img_rect.y = row_count * tile_size
-					tile = (img, img_rect)
-					self.tile_list.append(tile)
-				if tile == 2:
-					img = pygame.transform.scale(grass_img, (tile_size, tile_size))
-					img_rect = img.get_rect()
-					img_rect.x = col_count * tile_size
-					img_rect.y = row_count * tile_size
-					tile = (img, img_rect)
-					self.tile_list.append(tile)
-				col_count += 1
-			row_count += 1
+# scale the images to fit the screen
+        row_count = 0
+        for row in data:
+            col_count = 0
+            for tile in row:
+                # the rock image is number 2 within the list
+                if tile == 2:
+                    img = pygame.transform.scale(rock, (tile_size, tile_size))
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                # the red image is number 1 within the list
+                if tile == 1:
+                    img = pygame.transform.scale(red, (tile_size, tile_size))
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                col_count += 1
+            row_count += 1
 
-	def draw(self):
-		for tile in self.tile_list:
-			screen.blit(tile[0], tile[1])
+# creating a table for the platforms and their placement
+    def draw(self):
+        for tile in self.tile_list:
+            screen.blit(tile[0], tile[1])
 
 
 
 world_data = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
-[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 2, 2, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1], 
-[1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1], 
-[1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 2, 0, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 2, 1], 
-[1, 0, 0, 0, 0, 0, 2, 2, 2, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1], 
+[1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 0, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1], 
 [1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
 [1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
 [1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
 
-
-
 world = World(world_data)
+# Run until the user asks to quit
+running = True
+while running:
+ 
+ #runs the images 
 
-run = True
-while run:
+    screen.blit(lava,(-500,-500))
 
-	screen.blit(bg_img, (0, 0))
-	screen.blit(sun_img, (100, 100))
 
-	world.draw()
+    world.draw()
 
-	draw_grid()
+    draw_grid()
 
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
-			run = False
+    print(world.tile_list)
 
-	pygame.display.update()
+    # closing the game
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
+
+# updates the game with the new instructions
+    pygame.display.update()
+
+# Done! Time to quit.
 pygame.quit()
