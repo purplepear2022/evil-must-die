@@ -1,0 +1,155 @@
+import pygame
+pygame.init()
+
+# set up of the game and the size of the screen
+screen_width = 1000
+screen_height = 1000
+
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('rock game')
+
+#defining the grid size
+tile_size = 50
+
+#background
+lava = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/lava.png')
+
+
+# creating the sprite and making sure it is the correct size
+class Player():
+    def __init__ (self, x, y):
+        guy1 = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/guy1.png')
+        self.image = pygame.transform.scale(guy1, (40, 80))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y 
+        self.vel_y = 0
+        self.jumped = False
+
+    def update(self):
+        changex = 0
+        changey = 0
+        
+        #allowing the character to move
+        key = pygame.key.get_pressed()
+        if key[pygame.K_SPACE] and self.jumped == False:
+            self.vel_y = -15
+            self.jumped = True
+        if key[pygame.K_SPACE] == False:
+            self.jumped = False
+        if key[pygame.K_LEFT]:
+            changex -=5
+        if key[pygame.K_RIGHT]:
+            changex +=5
+
+        #creating gravity so that the player does not fly off the map
+        self.vel_y += 1
+        if self.vel_y > 10:
+                self.vel_y = 10
+        changey += self.vel_y
+
+        #check for collision
+
+        #update player cords
+        self.rect.x += changex
+        self.rect.y += changey
+
+        if self.rect.bottom > screen_height:
+            self.rect.bottom = screen_height
+            changey=0
+
+        #draw player on screen
+        screen.blit(self.image, self.rect)
+
+
+class World():
+    def __init__(self, data):
+        self.tile_list = []
+
+        #platform
+        rock = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/rock1.png')
+        red = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/red.png')
+
+# scale the images to fit the screen
+        row_count = 0
+        for row in data:
+            col_count = 0
+            for tile in row:
+                # the rock image is number 2 within the list
+                if tile == 2:
+                    img = pygame.transform.scale(rock, (tile_size, tile_size))
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                # the red image is number 1 within the list
+                if tile == 1:
+                    img = pygame.transform.scale(red, (tile_size, tile_size))
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                col_count += 1
+            row_count += 1
+
+# creating a table for the platforms and their placement
+    def draw(self):
+        for tile in self.tile_list:
+            screen.blit(tile[0], tile[1])
+
+
+# the layout of the images
+world_data = [
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 0, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+]
+
+#making the sprite the correct size to fit on the platform
+player = Player(100, screen_height - 110)
+
+world = World(world_data)
+# Run until the user asks to quit
+running = True
+while running:
+ 
+ #runs the images 
+
+    screen.blit(lava,(-500,-500))
+
+    world.draw()
+
+    player.update()
+
+    print(world.tile_list)
+
+    # closing the game
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+
+# updates the game with the new instructions
+    pygame.display.update()
+
+# Done! Time to quit.
+pygame.quit()
