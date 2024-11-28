@@ -1,0 +1,293 @@
+import pygame #allows pygame to load
+from pygame.locals import * # telling the device to use pygame from the install files
+
+pygame.init() # allows pygame to lauch
+
+clock = pygame.time.Clock() # controls the speed of the game so that it can handle your device graphics
+fps = 60 # the rate at which the game will run
+
+screen_width = 1000 # the size of the game width 
+screen_height = 1000 # the size of the game height
+
+screen = pygame.display.set_mode((screen_width, screen_height)) # using the two variables to create the game
+pygame.display.set_caption('Platformer') # name of what comes up when the game loads in the bar
+
+#define game variables
+tile_size = 50 # how big each tile size of the game is. for example each platform / square is 50 by 50
+game_over = 0 # a variable for when the user dies so that the game can reset
+
+#load images
+bg_img = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\background 1.jpg') # the image background of the game
+restart = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\restart.png') # the restart button
+
+class Button(): # this is how the restart button works and allows for the user to interact with it
+    def __init__ (self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y 
+        self.clicked = False
+    def draw (self): 
+        action = False
+        #get the position of the mouse
+        pos= pygame.mouse.get_pos()
+
+        #check the mouse position compared to the button
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False: # it can detect when the mouse is clicked on
+                action = True
+                self.clicked = True 
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+            
+        
+
+        #draw button
+        screen.blit(self.image,self.rect ) # puts the restart button onto the screen
+        return action
+
+class Player(): # creates the player and allows it to load onto the screen
+    def __init__(self, x, y):
+        self.reset(x, y)
+
+    def update(self, game_over): # determines how the character moves and where they are
+        changex = 0
+        changey = 0
+        walk_cooldown = 5 # allows for the animation to work but not too fast
+         
+
+        if game_over == 0:#get keypresses
+            key = pygame.key.get_pressed()
+            if key[pygame.K_SPACE] and self.jumped == False and self.in_air == False: #this makes sure the space key works so that the character can jump
+                self.vel_y = -15 # makes sure the character does not jump off the game
+                self.jumped = True
+            if key[pygame.K_SPACE] == False:
+                self.jumped = False
+            if key[pygame.K_LEFT]: #allows the character to move left 
+                changex -= 5
+                self.counter += 1
+                self.direction = -1
+            if key[pygame.K_RIGHT]: #allows the character to move right
+                changex += 5
+                self.counter += 1
+                self.direction = 1
+            if key[pygame.K_LEFT] == False and key[pygame.K_RIGHT] == False: # stops the chracter from moving if no button is pressed
+                self.counter = 0
+                self.index = 0
+                if self.direction == 1:
+                    self.image = self.images_right[self.index]
+                if self.direction == -1:
+                    self.image = self.images_left[self.index]
+
+            #handle animation
+            if self.counter > walk_cooldown: #makes sure the animation isnt too fast and stops if no buttons are pressed
+                self.counter = 0    
+                self.index += 1
+                if self.index >= len(self.images_right):
+                    self.index = 0
+                if self.direction == 1:
+                    self.image = self.images_right[self.index]
+                if self.direction == -1:
+                    self.image = self.images_left[self.index]
+
+            #add gravity so that the character does not float off the game
+            self.vel_y += 1
+            if self.vel_y > 10:
+                self.vel_y = 10
+            changey += self.vel_y
+
+            #check for collision
+            self.in_air = True
+            for tile in world.tile_list:
+                #check for collision in x direction
+                if tile[1].colliderect(self.rect.x + changex, self.rect.y, self.width, self.height):
+                    changex = 0
+                #check for collision in y direction
+                if tile[1].colliderect(self.rect.x, self.rect.y + changey, self.width, self.height):
+                    #check if below the ground i.e. jumping
+                    if self.vel_y < 0:
+                        changey = tile[1].bottom - self.rect.top
+                        self.vel_y = 0
+                    #check if above the ground i.e. falling
+                    elif self.vel_y >= 0:
+                        changey = tile[1].top - self.rect.bottom
+                        self.vel_y = 0
+                        self.in_air = False
+
+            # check for collision with enemies 
+            if pygame.sprite.spritecollide(self, enemy_group, False):
+                game_over = -1
+
+            # check for collision with the lava
+            if pygame.sprite.spritecollide(self, lava_group, False):
+                game_over = -1
+
+            #update player coordinates
+            self.rect.x += changex
+            self.rect.y += changey
+            
+        elif game_over == -1: # when the user dies it will load the ghost and allow it to float but not go off the game
+            self.image = self.dead_image
+            if self.rect.y > 200:
+                self.rect.y -=5
+
+        #draw player onto screen
+        screen.blit(self.image, self.rect)
+
+        return game_over
+    
+    def reset(self, x, y):                      #allows the player to be called and reset when it dies
+        self.images_right = []                  #make the images move to the right without them looking strange
+        self.images_left = []                   #make the images move to the left without them looking strange
+        self.index = 0
+        self.counter = 0
+        for num in range(1, 4): # runs the cat through the animation and onto the game
+            img_right = pygame.image.load(f'C:\\Users\\fergu\\Desktop\\VSC\\Evil Must Die Game\\project images\\cat{num}.png')
+            img_right = pygame.transform.scale(img_right, (50, 80)) # scales the cat to the correct size
+            img_left = pygame.transform.flip(img_right, True, False) # flips the cat when it goes left so that it does not face the wrong way
+            self.images_right.append(img_right)
+            self.images_left.append(img_left)
+        self.dead_image = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\ghost.png') # loads the ghost when the user dies
+        self.image = self.images_right[self.index]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.vel_y = 0
+        self.jumped = False
+        self.direction = 0
+        self.in_air = True
+
+class World(): #makes the game work. It loads all the designs
+    def __init__(self, data):
+        self.tile_list = []
+
+        #load images
+        grey_img = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\grey.jpg') #loads the border
+        evil_img = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\evil.png') # loads the platforms
+
+        row_count = 0
+        for row in data:
+            col_count = 0
+            for tile in row: # creates a grid for the platforms and all the objects to work in the game. it allows everything to align
+                if tile == 1: # loads the border and puts the image
+                    img = pygame.transform.scale(grey_img, (tile_size, tile_size)) # puts the border images to the correct scale and size for the grid
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                if tile == 2: #loads the platforms 
+                    img = pygame.transform.scale(evil_img, (tile_size, tile_size)) # makes the platforms the correct size for the grid
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                if tile == 3: #loads the enemy in and puts it on the map
+                    blob = Enemy(col_count * tile_size, row_count * tile_size)
+                    enemy_group.add(blob)
+                if tile == 4: #loads the lava in and puts it on the map in the correct place
+                    lava = Lava(col_count * tile_size, row_count * tile_size)
+                    lava_group.add(lava)
+
+                col_count += 1
+            row_count += 1
+
+    def draw(self): #drawing the grid onto the screen to show the size of each block
+        for tile in self.tile_list:
+            screen.blit(tile[0], tile[1])
+            pygame.draw.rect(screen, (255, 255, 255), tile[1], 2)
+
+#this allows the enemy to gain access to some of the functionalites that other sprites have
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\enemy.png') #loading the enemy in to the game
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.direction = 1
+        self.counter = 0
+
+#controlling the direction of the enemy using the grid size as it is 50 per square
+    def update(self):
+        self.rect.x += self.direction
+        self.counter += 1
+        if abs(self.counter) > 50:
+            self.direction *= -1
+            self.counter *= -1
+
+class Lava(pygame.sprite.Sprite): #where the lava is on the map and loading it in to the correct size
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        lava = pygame.image.load(r'C:\Users\fergu\Desktop\VSC\Evil Must Die Game\project images\fire.png')
+        self.image = pygame.transform.scale(lava,(tile_size, tile_size + 5))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+world_data = [ #the data and the layout of the game
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], 
+[1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 2, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 2, 0, 0, 2, 2, 0, 2, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 2, 0, 2, 2, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 1], 
+[1, 0, 0, 0, 0, 0, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 1, 1, 1], 
+[1, 0, 0, 0, 0, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1], 
+[1, 0, 0, 0, 2, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1], 
+[1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+]
+
+#allowing the characters to load
+player = Player(100, screen_height - 130)
+enemy_group = pygame.sprite.Group()
+lava_group = pygame.sprite.Group()
+world = World(world_data)
+
+#creating the buttons
+restart_button = Button(screen_width //2 - 50, screen_height // 2 + 100, restart)
+
+run = True
+while run:
+
+    clock.tick(fps)
+
+    screen.blit(bg_img, (0, 0)) #loading the background
+
+    world.draw()
+    
+    if game_over == 0:
+        enemy_group.update()
+        
+    enemy_group.draw(screen) #putting the enemy onto the screen
+    lava_group.draw(screen) #putting the lava onto the screen
+
+    game_over = player.update(game_over) #tells the player if they die and restarts the game
+
+    # if the player dies
+    if game_over == -1:
+        if restart_button.draw():
+            player.reset(100, screen_height - 130)
+            game_over = 0
+
+    for event in pygame.event.get(): #allows the user to press x and quite the game 
+        if event.type == pygame.QUIT:
+            run = False
+
+    pygame.display.update()
+
+pygame.quit()
