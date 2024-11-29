@@ -1,0 +1,58 @@
+# heart collection class 
+class Heart(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+	pygame.sprite.Sprite.__init__(self)
+	img = pygame.image.load("img/heart.jpg")
+	self.image = pygame.transform.scale(img, (tile_size // 2, tile_size // 2))
+	self.rect = self.image.get_rect()
+	self.rect.center = (x, y)
+
+
+# group for heart 
+heart_group = pygame.sprite.Group()
+
+# showing heart with counter 
+score_heart = Heart(tile_size // 2, tile_size // 2)
+heart_group.add(score_heart)
+
+
+# IDK IF THIS PART WILL WORK WITH THE OTHER CODE WRITTEN
+# creation of hearts in level generation 
+if tile == 7:
+	heart = Heart(col_count * tile_size + (tile_size // 2), row_count * tile_size + (tile_size // 2))
+	heart_group.add(exit)
+
+
+# hearts show up on screen 
+heart_group.draw(screen)
+
+
+# add in variable of score
+score = 0
+
+
+# if game_over == 0 
+# updating score 
+# check if heart has been collected
+if pygame.sprite.spritecollide(player, heart_group, True):
+	score += 1
+
+
+# if game over or game complete 
+# set score to 0 
+score = 0
+
+
+# definitions needed to add text in 
+def draw_text(text, font, text_col, x, y):
+	img = font.render(text, True, text_col)
+	screen.blit(img, (x, y))
+
+# define font 
+font_score = pygame.font.SysFont("font name", 30) #30 is size
+
+#define colours 
+white = (255, 255, 255)
+
+# heart counter show in left corner 
+draw_text("X " + str(score), font_score, white, tile_size - 10, 10)
