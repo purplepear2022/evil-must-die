@@ -1,0 +1,387 @@
+import pygame #allows pygame to load
+from pygame.locals import * # telling the device to use pygame from the install files
+import pickle 
+from os import path
+
+pygame.init() # allows pygame to lauch
+
+clock = pygame.time.Clock() # controls the speed of the game so that it can handle your device graphics
+fps = 60 # the rate at which the game will run
+
+screen_width = 1000 # the size of the game width 
+screen_height = 1000 # the size of the game height
+
+screen = pygame.display.set_mode((screen_width, screen_height)) # using the two variables to create the game
+pygame.display.set_caption('Platformer') # name of what comes up when the game loads in the bar
+
+# define font 
+font = pygame.font.SysFont("bauhaus 93", 70)
+font_score = pygame.font.SysFont("bauhaus 93", 30) #30 is size
+
+#define game variables
+tile_size = 50 # how big each tile size of the game is. for example each platform / square is 50 by 50
+game_over = 0 # a variable for when the user dies so that the game can reset
+main_menu = True
+level = 1
+max_levels = 3
+score = 0
+
+#define colours 
+white = (255, 255, 255)
+blue = (0, 0, 255)
+
+#load images
+bg_img = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/project/background 1.jpg') # the image background of the game
+text = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Project/title1.png')
+restart = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/restart.png') # the restart button
+start = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Project/start.png')
+exit = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/restart.png')
+
+
+# definitions needed to add text in 
+def draw_text(text, font, text_col, x, y):
+    img = font.render(text, True, text_col)
+    screen.blit(img, (x, y))
+
+# function to reset level
+def reset_level(level):
+    player.reset(100, screen_height - 130)
+    enemy_group.empty()
+    lava_group.empty()
+    exit_group.empty()
+
+    #load in level data and create world
+    if path.exists(f'level{level}_data.pk1'):
+        pickle_in = open(f'level{level}_data.pk1', 'rb')
+        world_data = pickle.load(pickle_in)
+    world = World(world_data)
+
+    return world
+
+
+class Button(): # this is how the restart button works and allows for the user to interact with it
+    def __init__ (self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y 
+        self.clicked = False
+    def draw (self): 
+        action = False
+        #get the position of the mouse
+        pos= pygame.mouse.get_pos()
+
+        #check the mouse position compared to the button
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False: # it can detect when the mouse is clicked on
+                action = True
+                self.clicked = True 
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+            
+        
+
+        #draw button
+        screen.blit(self.image,self.rect ) # puts the restart button onto the screen
+        return action
+
+class Player(): # creates the player and allows it to load onto the screen
+    def __init__(self, x, y):
+        self.reset(x, y)
+
+    def update(self, game_over): # determines how the character moves and where they are
+        changex = 0
+        changey = 0
+        walk_cooldown = 5 # allows for the animation to work but not too fast
+         
+
+        if game_over == 0:#get keypresses
+            key = pygame.key.get_pressed()
+            if key[pygame.K_SPACE] and self.jumped == False and self.in_air == False: #this makes sure the space key works so that the character can jump
+                self.vel_y = -15 # makes sure the character does not jump off the game
+                self.jumped = True
+            if key[pygame.K_SPACE] == False:
+                self.jumped = False
+            if key[pygame.K_LEFT]: #allows the character to move left 
+                changex -= 5
+                self.counter += 1
+                self.direction = -1
+            if key[pygame.K_RIGHT]: #allows the character to move right
+                changex += 5
+                self.counter += 1
+                self.direction = 1
+            if key[pygame.K_LEFT] == False and key[pygame.K_RIGHT] == False: # stops the chracter from moving if no button is pressed
+                self.counter = 0
+                self.index = 0
+                if self.direction == 1:
+                    self.image = self.images_right[self.index]
+                if self.direction == -1:
+                    self.image = self.images_left[self.index]
+
+            #handle animation
+            if self.counter > walk_cooldown: #makes sure the animation isnt too fast and stops if no buttons are pressed
+                self.counter = 0    
+                self.index += 1
+                if self.index >= len(self.images_right):
+                    self.index = 0
+                if self.direction == 1:
+                    self.image = self.images_right[self.index]
+                if self.direction == -1:
+                    self.image = self.images_left[self.index]
+
+            #add gravity so that the character does not float off the game
+            self.vel_y += 1
+            if self.vel_y > 10:
+                self.vel_y = 10
+            changey += self.vel_y
+
+            #check for collision
+            self.in_air = True
+            for tile in world.tile_list:
+                #check for collision in x direction
+                if tile[1].colliderect(self.rect.x + changex, self.rect.y, self.width, self.height):
+                    changex = 0
+                #check for collision in y direction
+                if tile[1].colliderect(self.rect.x, self.rect.y + changey, self.width, self.height):
+                    #check if below the ground i.e. jumping
+                    if self.vel_y < 0:
+                        changey = tile[1].bottom - self.rect.top
+                        self.vel_y = 0
+                    #check if above the ground i.e. falling
+                    elif self.vel_y >= 0:
+                        changey = tile[1].top - self.rect.bottom
+                        self.vel_y = 0
+                        self.in_air = False
+
+            # check for collision with enemies 
+            if pygame.sprite.spritecollide(self, enemy_group, False):
+                game_over = -1
+
+            # check for collision with the lava
+            if pygame.sprite.spritecollide(self, lava_group, False):
+                game_over = -1
+
+            # check for collision with the exit
+            if pygame.sprite.spritecollide(self, exit_group, False):
+                game_over = 1
+
+            #update player coordinates
+            self.rect.x += changex
+            self.rect.y += changey
+            
+            
+        elif game_over == -1: # when the user dies it will load the ghost and allow it to float but not go off the game
+            self.image = self.dead_image
+            draw_text("Game over", font, blue, (screen_width //2) - 200, screen_height // 2 )
+            if self.rect.y > 200:
+                self.rect.y -=5
+
+        #draw player onto screen
+        screen.blit(self.image, self.rect)
+
+        return game_over
+    
+    def reset(self, x, y):                      #allows the player to be called and reset when it dies
+        self.images_right = []                  #make the images move to the right without them looking strange
+        self.images_left = []                   #make the images move to the left without them looking strange
+        self.index = 0
+        self.counter = 0
+        for num in range(1, 4): # runs the cat through the animation and onto the game
+            img_right = pygame.image.load(f'C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/cat{num}.png')
+            img_right = pygame.transform.scale(img_right, (50, 80)) # scales the cat to the correct size
+            img_left = pygame.transform.flip(img_right, True, False) # flips the cat when it goes left so that it does not face the wrong way
+            self.images_right.append(img_right)
+            self.images_left.append(img_left)
+        self.dead_image = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/ghost.png') # loads the ghost when the user dies
+        self.image = self.images_right[self.index]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.vel_y = 0
+        self.jumped = False
+        self.direction = 0
+        self.in_air = True
+
+class World(): #makes the game work. It loads all the designs
+    def __init__(self, data):
+        self.tile_list = []
+
+        #load images
+        grey_img = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/grey.jpg') #loads the border
+        evil_img = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/evil.png') # loads the platforms
+
+        row_count = 0
+        for row in data:
+            col_count = 0
+            for tile in row: # creates a grid for the platforms and all the objects to work in the game. it allows everything to align
+                if tile == 1: # loads the border and puts the image
+                    img = pygame.transform.scale(grey_img, (tile_size, tile_size)) # puts the border images to the correct scale and size for the grid
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                if tile == 2: #loads the platforms 
+                    img = pygame.transform.scale(evil_img, (tile_size, tile_size)) # makes the platforms the correct size for the grid
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                if tile == 3: #loads the enemy in and puts it on the map
+                    blob = Enemy(col_count * tile_size, row_count * tile_size)
+                    enemy_group.add(blob)
+                if tile == 4: #loads the lava in and puts it on the map in the correct place
+                    lava = Lava(col_count * tile_size, row_count * tile_size)
+                    lava_group.add(lava)
+                if tile == 7:
+                    heart = Heart(col_count * tile_size + (tile_size // 2), row_count * tile_size + (tile_size // 2))
+                    heart_group.add(heart)
+                if tile == 8: #loads in the exit in the correct place
+                    exit = Exit(col_count * tile_size, row_count * tile_size - (tile_size // 2))
+                    exit_group.add(exit)
+                col_count += 1
+            row_count += 1
+
+    def draw(self): #drawing the grid onto the screen to show the size of each block
+        for tile in self.tile_list:
+            screen.blit(tile[0], tile[1])
+            pygame.draw.rect(screen, (255, 255, 255), tile[1], 2)
+
+#this allows the enemy to gain access to some of the functionalites that other sprites have
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/Trial of pygame/enemy.png')#loading the enemy in to the game
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.direction = 1
+        self.counter = 0
+
+#controlling the direction of the enemy using the grid size as it is 50 per square
+    def update(self):
+        self.rect.x += self.direction
+        self.counter += 1
+        if abs(self.counter) > 50:
+            self.direction *= -1
+            self.counter *= -1
+
+class Lava(pygame.sprite.Sprite): #where the lava is on the map and loading it in to the correct size
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        lava = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/trial of pygame/fire.png')
+        self.image = pygame.transform.scale(lava,(tile_size, tile_size + 5))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+# heart collection class 
+class Heart(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        heart = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/trial of pygame/heart.png')
+        self.image = pygame.transform.scale(heart, (tile_size // 2, tile_size // 2))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+
+class Exit(pygame.sprite.Sprite): #where the exit is on the map and loading it in to the correct size
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        lava = pygame.image.load('C:/Users/chloe/Desktop/BNU/First year/Programming concepts/trial of pygame/rock.png')
+        self.image = pygame.transform.scale(lava, (tile_size, tile_size * 2))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+
+#allowing the characters to load
+player = Player(100, screen_height - 130)
+enemy_group = pygame.sprite.Group()
+lava_group = pygame.sprite.Group()
+heart_group = pygame.sprite.Group()
+exit_group = pygame.sprite.Group()
+
+# showing heart with counter 
+score_heart = Heart(tile_size // 2, tile_size // 2)
+heart_group.add(score_heart)
+
+#load in level data and create world
+if path.exists(f'level{level}_data.pk1'):
+    pickle_in = open(f'level{level}_data.pk1', 'rb')
+    world_data = pickle.load(pickle_in)
+    world = World(world_data)
+
+#creating the buttons
+restart_button = Button(screen_width //2 - 50, screen_height // 2 + 100, restart)
+start_button = Button((screen_width // 2 - 350), screen_height // 2, start)
+exit_button = Button ((screen_width // 2 + 170), screen_height // 2 + 200, exit )
+
+
+run = True
+while run:
+
+    clock.tick(fps)
+
+    screen.blit(bg_img, (0, 0)) #loading the background
+
+
+    if main_menu:  # Equivalent to main_menu == True
+        screen.blit(text, (140, 5))
+        if exit_button.draw():  # Check if the exit button was clicked
+            run = False  # Stop the game loop
+        if start_button.draw():  # Check if the start button was clicked
+            main_menu = False  # Transition to the game world (not the main menu)
+    else:
+        world.draw()  # Draw the game world when not on the main menu
+        
+        if game_over == 0:
+            enemy_group.update()
+        # updating score 
+        # check if heart has been collected
+        if pygame.sprite.spritecollide(player, heart_group, True):
+            score += 1
+        draw_text("X " + str(score), font_score, white, tile_size +5 , 19)
+            
+        enemy_group.draw(screen) #putting the enemy onto the screen
+        lava_group.draw(screen) #putting the lava onto the screen
+        heart_group.draw(screen)
+        exit_group.draw(screen) #putting the exit onto the screen
+
+        game_over = player.update(game_over) #tells the player if they die and restarts the game
+
+        # if the player dies
+        if game_over == -1:
+            if restart_button.draw():
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+
+        # if player has completed the level
+        if game_over == 1:
+            # reset game and go to next level
+            level += 1
+            if level <= max_levels:
+                # reset levels
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+            else:
+                draw_text ("You win!", font, blue, (screen_width //2)- 140, screen_height // 2)
+                if restart_button.draw():
+                    level = 1
+                    world_data = []
+                    world = reset_level(level)
+                    game_over = 0
+                    score = 0
+
+    for event in pygame.event.get(): #allows the user to press x and quite the game 
+        if event.type == pygame.QUIT:
+            run = False
+
+    pygame.display.update()
+
+pygame.quit()
